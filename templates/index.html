@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Resume Screener</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; }
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; }
+        h1 { color: #1F5C99; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .card { background: white; padding: 25px; border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h3 { color: #1F5C99; margin-bottom: 15px; }
+        input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #1F5C99;
+                             border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ddd;
+                             border-radius: 8px; font-size: 14px; margin-bottom: 10px; }
+        button { background: #1F5C99; color: white; padding: 12px 25px;
+                border: none; border-radius: 8px; cursor: pointer;
+                font-size: 14px; width: 100%; }
+        button:hover { background: #2E75B6; }
+        .success { color: green; margin-top: 10px; font-weight: bold; }
+        .error { color: red; margin-top: 10px; }
+        .answer-box { background: #f8f9ff; padding: 20px; border-radius: 8px;
+                     border-left: 4px solid #1F5C99; margin-top: 15px;
+                     white-space: pre-wrap; line-height: 1.6; }
+        .sources { color: #888; font-size: 12px; margin-top: 10px; }
+        .loading { text-align: center; color: #1F5C99; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Smart Resume Screener</h1>
+        <p class="subtitle">Upload resumes and ask intelligent HR questions powered by RAG + Gemini AI</p>
+
+        <div class="card">
+            <h3>📄 Step 1: Upload Resumes (PDF only)</h3>
+            <input type="file" id="resumeFiles" multiple accept=".pdf">
+            <button onclick="uploadResumes()">Upload & Index Resumes</button>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <div class="card">
+            <h3>💬 Step 2: Ask a Question</h3>
+            <input type="text" id="question"
+                   placeholder="e.g. Who is best for a Data Engineer role?">
+            <button onclick="askQuestion()">🔍 Screen Resumes</button>
+            <div id="loading" class="loading" style="display:none">🔍 Analyzing resumes...</div>
+            <div id="answerBox" style="display:none">
+                <div class="answer-box" id="answerText"></div>
+                <div class="sources" id="sourcesText"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function uploadResumes() {
+            const files = document.getElementById("resumeFiles").files;
+            if (files.length === 0) {
+                document.getElementById("uploadStatus").innerHTML =
+                    '<p class="error">Please select PDF files first!</p>';
+                return;
+            }
+            document.getElementById("uploadStatus").innerHTML =
+                '<p class="loading">⏳ Uploading and indexing...</p>';
+            const formData = new FormData();
+            for (let file of files) formData.append("resumes", file);
+            const res = await fetch("/upload", { method: "POST", body: formData });
+            const data = await res.json();
+            document.getElementById("uploadStatus").innerHTML = data.message
+                ? `<p class="success">${data.message}</p>`
+                : `<p class="error">${data.error}</p>`;
+        }
+
+        async function askQuestion() {
+            const question = document.getElementById("question").value.trim();
+            if (!question) { alert("Please enter a question!"); return; }
+            document.getElementById("loading").style.display = "block";
+            document.getElementById("answerBox").style.display = "none";
+            const res = await fetch("/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question })
+            });
+            const data = await res.json();
+            document.getElementById("loading").style.display = "none";
+            if (data.answer) {
+                document.getElementById("answerText").innerText = data.answer;
+                document.getElementById("sourcesText").innerText =
+                    "📁 Sources: " + data.sources.join(", ");
+                document.getElementById("answerBox").style.display = "block";
+            } else { alert(data.error || "Something went wrong!"); }
+        }
+
+        document.getElementById("question").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") askQuestion();
+        });
+    </script>
+</body>
+</html>
