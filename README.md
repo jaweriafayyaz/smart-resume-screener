@@ -17,7 +17,6 @@ Upload multiple PDF resumes, ask questions like *"Who is best for a Data Enginee
 
 ---
 
----
 ## 📸 Demo
 
 ### Upload & Index Resumes
